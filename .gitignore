@@ -1,0 +1,32 @@
+# Ignore build directories
+/build/
+/out/
+
+# Ignore IDE-specific files
+/.idea/
+/.vscode/
+/*.iml
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore log files
+*.log
+
+# Ignore compiled Java files
+*.class
+
+# Ignore properties files
+*.properties
+
+# Ignore JAR files
+*.jar
+
+# Ignore backup files
+*.bak
+*.tmp
+
+# Ignore user-specific settings
+*.swp
+*.swo
