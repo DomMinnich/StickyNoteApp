@@ -1,4 +1,4 @@
-# StickNoteApp
+# StickyNoteApp
 
 A lightweight, customizable sticky notes application built with Java Swing that runs in your system tray. I really wanted a sticky note app where I could control its transparency and have it lock to the top layer of the screen above applications, so I did it myself!
 
