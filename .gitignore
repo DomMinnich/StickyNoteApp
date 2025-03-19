@@ -6,6 +6,7 @@
 /.idea/
 /.vscode/
 /*.iml
+*.rtf
 
 # Ignore OS-specific files
 .DS_Store
@@ -30,3 +31,12 @@ Thumbs.db
 # Ignore user-specific settings
 *.swp
 *.swo
+
+# Ignore (dist folder)
+/dist/
+
+# ignore compile.py
+/compile.py
+
+
+

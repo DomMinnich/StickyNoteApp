@@ -10,6 +10,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.plaf.basic.BasicScrollBarUI;
 import javax.swing.text.*;
+import javax.swing.text.rtf.RTFEditorKit;
 
 public class Main {
     public static void main(String[] args) {
@@ -23,6 +24,7 @@ public class Main {
             createSystemTrayIcon();
         });
     }
+
 
     private static void createSystemTrayIcon() {
         try {
@@ -128,78 +130,123 @@ class NotesManager {
         dialog.setVisible(true);
     }
 
-    public static void saveNotes() {
-        Properties props = new Properties();
-        int index = 0;
-        for (NoteWindow note : NOTES) {
-            NoteData data = note.getNoteData();
-            String prefix = "note." + index + ".";
-            props.setProperty(prefix + "id", data.id);
-            props.setProperty(prefix + "title", data.title);
-            props.setProperty(prefix + "content", data.content.replace("\n", "\\n"));
-            props.setProperty(prefix + "x", String.valueOf(data.x));
-            props.setProperty(prefix + "y", String.valueOf(data.y));
-            props.setProperty(prefix + "width", String.valueOf(data.width));
-            props.setProperty(prefix + "height", String.valueOf(data.height));
-            props.setProperty(prefix + "locked", String.valueOf(data.isLocked));
-            props.setProperty(prefix + "ontop", String.valueOf(data.alwaysOnTop));
-            props.setProperty(prefix + "transparency", String.valueOf(data.transparency));
-            props.setProperty(prefix + "noteBackground", String.valueOf(data.noteBackground.getRGB()));
-            props.setProperty(prefix + "toolbarColor", String.valueOf(data.toolbarColor.getRGB()));
-            props.setProperty(prefix + "fontFamily", data.fontFamily);
-            props.setProperty(prefix + "fontSize", String.valueOf(data.fontSize));
-            // Save the minimum dimensions (which update when you change size in settings)
-            props.setProperty(prefix + "minWidth", String.valueOf(data.minWidth));
-            props.setProperty(prefix + "minHeight", String.valueOf(data.minHeight));
-            index++;
-        }
-        props.setProperty("count", String.valueOf(index));
+public static void saveNotes() {
+    Properties props = new Properties();
+    int index = 0;
 
-        try (FileOutputStream fos = new FileOutputStream(NOTES_DATA_FILE)) {
-            props.store(fos, "Notes Data");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    // Ensure the RTF folder exists
+    File rtfFolder = new File(NOTES_DATA_FILE.getParent(), "notes_rtf");
+    if (!rtfFolder.exists()) {
+        rtfFolder.mkdirs();
     }
 
-    public static void loadNotes() {
-        if (!NOTES_DATA_FILE.exists()) return;
-        Properties props = new Properties();
-        try (FileInputStream fis = new FileInputStream(NOTES_DATA_FILE)) {
-            props.load(fis);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return;
-        }
-        int count = Integer.parseInt(props.getProperty("count", "0"));
-        for (int i = 0; i < count; i++) {
-            String prefix = "note." + i + ".";
-            NoteData data = new NoteData();
-            data.id = props.getProperty(prefix + "id");
-            data.title = props.getProperty(prefix + "title");
-            data.content = props.getProperty(prefix + "content").replace("\\n", "\n");
-            data.x = Integer.parseInt(props.getProperty(prefix + "x"));
-            data.y = Integer.parseInt(props.getProperty(prefix + "y"));
-            data.width = Integer.parseInt(props.getProperty(prefix + "width"));
-            data.height = Integer.parseInt(props.getProperty(prefix + "height"));
-            data.isLocked = Boolean.parseBoolean(props.getProperty(prefix + "locked"));
-            data.alwaysOnTop = Boolean.parseBoolean(props.getProperty(prefix + "ontop"));
-            data.transparency = Float.parseFloat(props.getProperty(prefix + "transparency"));
-            data.noteBackground = new Color(Integer.parseInt(props.getProperty(prefix + "noteBackground")));
-            data.toolbarColor = new Color(Integer.parseInt(props.getProperty(prefix + "toolbarColor")));
-            data.fontFamily = props.getProperty(prefix + "fontFamily");
-            data.fontSize = Integer.parseInt(props.getProperty(prefix + "fontSize"));
-            data.minWidth = Integer.parseInt(props.getProperty(prefix + "minWidth", String.valueOf(data.width)));
-            data.minHeight = Integer.parseInt(props.getProperty(prefix + "minHeight", String.valueOf(data.height)));
+    for (NoteWindow note : NOTES) {
+        NoteData data = note.getNoteData();
+        String prefix = "note." + index + ".";
+        props.setProperty(prefix + "id", data.id);
+        props.setProperty(prefix + "title", data.title);
+        props.setProperty(prefix + "x", String.valueOf(data.x));
+        props.setProperty(prefix + "y", String.valueOf(data.y));
+        props.setProperty(prefix + "width", String.valueOf(data.width));
+        props.setProperty(prefix + "height", String.valueOf(data.height));
+        props.setProperty(prefix + "locked", String.valueOf(data.isLocked));
+        props.setProperty(prefix + "ontop", String.valueOf(data.alwaysOnTop));
+        props.setProperty(prefix + "transparency", String.valueOf(data.transparency));
+        props.setProperty(prefix + "noteBackground", String.valueOf(data.noteBackground.getRGB()));
+        props.setProperty(prefix + "toolbarColor", String.valueOf(data.toolbarColor.getRGB()));
+        props.setProperty(prefix + "fontFamily", data.fontFamily);
+        props.setProperty(prefix + "fontSize", String.valueOf(data.fontSize));
+        props.setProperty(prefix + "minWidth", String.valueOf(data.minWidth));
+        props.setProperty(prefix + "minHeight", String.valueOf(data.minHeight));
 
-            NoteWindow noteWindow = new NoteWindow(data);
-            NOTES.add(noteWindow);
-            noteWindow.setVisible(true);
+        // Save styled content to a separate file in the "notes_rtf" folder
+        File styledContentFile = new File(rtfFolder, data.id + ".rtf");
+        try (FileOutputStream fos = new FileOutputStream(styledContentFile)) {
+            RTFEditorKit rtfEditorKit = new RTFEditorKit();
+            rtfEditorKit.write(fos, note.getStyledDocument(), 0, note.getStyledDocument().getLength());
+        } catch (IOException | BadLocationException e) {
+            e.printStackTrace();
         }
+        props.setProperty(prefix + "contentFile", styledContentFile.getName());
+        index++;
     }
+    props.setProperty("count", String.valueOf(index));
+
+    try (FileOutputStream fos = new FileOutputStream(NOTES_DATA_FILE)) {
+        props.store(fos, "Notes Data");
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+
+public static void loadNotes() {
+    if (!NOTES_DATA_FILE.exists()) return;
+    Properties props = new Properties();
+    try (FileInputStream fis = new FileInputStream(NOTES_DATA_FILE)) {
+        props.load(fis);
+    } catch (IOException e) {
+        e.printStackTrace();
+        return;
+    }
+
+    // Ensure the RTF folder exists
+    File rtfFolder = new File(NOTES_DATA_FILE.getParent(), "notes_rtf");
+    if (!rtfFolder.exists()) {
+        rtfFolder.mkdirs();
+    }
+
+    int count = Integer.parseInt(props.getProperty("count", "0"));
+    for (int i = 0; i < count; i++) {
+        String prefix = "note." + i + ".";
+        NoteData data = new NoteData();
+        data.id = props.getProperty(prefix + "id");
+        data.title = props.getProperty(prefix + "title");
+        data.x = Integer.parseInt(props.getProperty(prefix + "x"));
+        data.y = Integer.parseInt(props.getProperty(prefix + "y"));
+        data.width = Integer.parseInt(props.getProperty(prefix + "width"));
+        data.height = Integer.parseInt(props.getProperty(prefix + "height"));
+        data.isLocked = Boolean.parseBoolean(props.getProperty(prefix + "locked"));
+        data.alwaysOnTop = Boolean.parseBoolean(props.getProperty(prefix + "ontop"));
+        data.transparency = Float.parseFloat(props.getProperty(prefix + "transparency"));
+        data.noteBackground = new Color(Integer.parseInt(props.getProperty(prefix + "noteBackground")));
+        data.toolbarColor = new Color(Integer.parseInt(props.getProperty(prefix + "toolbarColor")));
+        data.fontFamily = props.getProperty(prefix + "fontFamily");
+        data.fontSize = Integer.parseInt(props.getProperty(prefix + "fontSize"));
+        data.minWidth = Integer.parseInt(props.getProperty(prefix + "minWidth", String.valueOf(data.width)));
+        data.minHeight = Integer.parseInt(props.getProperty(prefix + "minHeight", String.valueOf(data.height)));
+
+        NoteWindow noteWindow = new NoteWindow(data);
+
+        // Load styled content from the file in the "notes_rtf" folder
+        String contentFileName = props.getProperty(prefix + "contentFile");
+        if (contentFileName != null) {
+            File styledContentFile = new File(rtfFolder, contentFileName);
+            try (FileInputStream fis = new FileInputStream(styledContentFile)) {
+                RTFEditorKit rtfEditorKit = new RTFEditorKit();
+                rtfEditorKit.read(fis, noteWindow.getStyledDocument(), 0);
+            } catch (IOException | BadLocationException e) {
+                e.printStackTrace();
+            }
+        }
+
+        NOTES.add(noteWindow);
+        noteWindow.setVisible(true);
+    }
+}
 
     public static void deleteNote(NoteWindow noteWindow) {
         NOTES.remove(noteWindow);
+    
+        // Delete the associated RTF file
+        NoteData data = noteWindow.getNoteData();
+        File rtfFolder = new File(NOTES_DATA_FILE.getParent(), "notes_rtf");
+        File styledContentFile = new File(rtfFolder, data.id + ".rtf");
+        if (styledContentFile.exists()) {
+            if (!styledContentFile.delete()) {
+                System.err.println("Failed to delete RTF file: " + styledContentFile.getAbsolutePath());
+            }
+        }
+    
         noteWindow.dispose();
         saveNotes();
     }
@@ -288,6 +335,10 @@ class NoteWindow extends JFrame {
 
     public NoteData getNoteData() {
         return noteData;
+    }
+
+    public StyledDocument getStyledDocument() {
+        return notePane.getStyledDocument();
     }
 
     private void initComponents() {
