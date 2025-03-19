@@ -29,7 +29,7 @@ With Controls Hidden:
 
 ### Installation
 
-1. Download the latest release JAR file from the [Releases](https://github.com/YourUsername/StickNoteApp/releases) page
+1. Download the latest release JAR file from the [Releases](https://github.com/YourUsername/StickyNoteApp/releases) page
 2. Double-click the JAR file to run the application
 3. The application will appear in your system tray
 
@@ -37,7 +37,7 @@ With Controls Hidden:
 
 1. Clone this repository:
    ```
-   git clone https://github.com/YourUsername/StickNoteApp.git
+   git clone https://github.com/YourUsername/StickyNoteApp.git
    ```
 2. Open the project in your preferred Java IDE (Eclipse, IntelliJ, etc.)
 3. Build the project

@@ -35,8 +35,5 @@ Thumbs.db
 # Ignore (dist folder)
 /dist/
 
-# ignore compile.py
-/compile.py
-
 
 
